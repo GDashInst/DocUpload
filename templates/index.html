@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Submission | UCL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/latest/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --ucl-dark-purple: #372751;
+            --ucl-bright-purple: #8f08c2;
+            --ucl-mid-purple: #5a487a;
+        }
+
+        body {
+            background-color: #f4f4f7;
+            font-family: Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .upload-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .ucl-header {
+            color: var(--ucl-dark-purple);
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--ucl-mid-purple);
+            border-radius: 8px;
+            padding: 40px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin: 20px 0;
+            background: #fafafa;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            background: #f0ebf5;
+            border-color: var(--ucl-bright-purple);
+        }
+
+        .btn-ucl {
+            background-color: var(--ucl-dark-purple);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-weight: 600;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .btn-ucl:hover {
+            background-color: var(--ucl-bright-purple);
+            color: white;
+        }
+
+        #status-msg {
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--ucl-bright-purple);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="upload-card">
+    <h2 class="ucl-header">UCL Document Upload</h2>
+    <p class="text-muted">Documents with Track Changes will be automatically rejected.</p>
+
+    <form id="uploadForm">
+        <div class="drop-zone" id="dropZone">
+            <p id="fileName">Drag & Drop Word Document or Click to Browse</p>
+            <input type="file" id="fileInput" name="file" accept=".docx" style="display: none;">
+        </div>
+        
+        <div class="loader" id="loader"></div>
+        <button type="submit" class="btn btn-ucl w-100">Verify and Send</button>
+    </form>
+
+    <div id="status-msg"></div>
+</div>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileNameDisplay = document.getElementById('fileName');
+    const uploadForm = document.getElementById('uploadForm');
+    const statusMsg = document.getElementById('status-msg');
+    const loader = document.getElementById('loader');
+
+    // Trigger file input on click
+    dropZone.onclick = () => fileInput.click();
+
+    // Visual feedback for dragging
+    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+    dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+    
+    dropZone.ondrop = (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            updateFileName();
+        }
+    };
+
+    fileInput.onchange = updateFileName;
+
+    function updateFileName() {
+        if (fileInput.files.length > 0) {
+            fileNameDisplay.innerHTML = `<strong>Selected:</strong> ${fileInput.files[0].name}`;
+        }
+    }
+
+    uploadForm.onsubmit = async (e) => {
+        e.preventDefault();
+        if (!fileInput.files.length) {
+            statusMsg.innerHTML = '<span class="text-danger">Please select a file first.</span>';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        statusMsg.innerText = "";
+        loader.style.display = "block";
+
+        try {
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.text();
+            loader.style.display = "none";
+
+            if (response.ok) {
+                statusMsg.innerHTML = `<span class="text-success">${result}</span>`;
+                uploadForm.reset();
+                fileNameDisplay.innerText = "Drag & Drop Word Document or Click to Browse";
+            } else {
+                statusMsg.innerHTML = `<span class="text-danger">${result}</span>`;
+            }
+        } catch (error) {
+            loader.style.display = "none";
+            statusMsg.innerHTML = '<span class="text-danger">An error occurred during upload.</span>';
+        }
+    };
+</script>
+
+</body>
+</html>
